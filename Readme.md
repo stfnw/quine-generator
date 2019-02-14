@@ -1,6 +1,17 @@
 Quine generator
 ===============
 
+Demo pre-generated example quine (assembly)
+-------------------------------------------
+
+
+
+Demo invocation of the generator (assembly)
+-------------------------------------------
+
+
+---
+
 This project offers a generalized quine generator in both C and s390x assembly
 language -- simply paste in your (almost) arbitrary existing code into the given
 base-frame at `quine_generator_src/*/basis.{c,s}` and compile the project with
