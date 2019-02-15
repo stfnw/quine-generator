@@ -4,10 +4,13 @@ Quine generator
 Demo pre-generated example quine (assembly)
 -------------------------------------------
 
+![quine_example_assembly](https://user-images.githubusercontent.com/28357058/52872407-be360e80-314c-11e9-897a-62a04cf223b1.gif)
 
 
 Demo invocation of the generator (assembly)
 -------------------------------------------
+
+![quine_generator_assembly](https://user-images.githubusercontent.com/28357058/52872578-28e74a00-314d-11e9-8386-385758c67dbb.gif)
 
 
 ---
