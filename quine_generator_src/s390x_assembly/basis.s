@@ -121,7 +121,7 @@ decode:
 
 .loop:  sll     %r7,1                       #/ r10 - index register, pos in dec
         lgr     %r10,%r7                    #| r10 = 6*r7   (temp register, see dec_len: output size = 6 * input size)
-        sll     %r10,2                      #| 6x = 8x - 2x = x<<2 - x<<1
+        sll     %r10,2                      #| 6x = 8x - 2x = x<<3 - x<<1
         slr     %r10,%r7                    #|
         srl     %r7,1                       #\ restore r7
 
