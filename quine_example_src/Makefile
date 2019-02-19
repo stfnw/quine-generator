@@ -6,7 +6,7 @@ TARGET := $(basename $(wildcard *.c *.s))
 all: $(TARGET)
 
 %: %.c
-	gcc -o $@ $< -Wall -Werror
+	gcc -o $@ $< -Wall -Werror -std=c99
 
 %.o: %.s
 	as -o $@ $<

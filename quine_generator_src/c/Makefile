@@ -5,7 +5,7 @@ BUILD_DIR := build
 TARGET_SRC := $(BUILD_DIR)/quine.c
 TARGET     := $(BUILD_DIR)/quine
 
-CFLAGS := -Wall -Os
+CFLAGS := -Wall -Werror -std=c99
 
 
 .PHONY: all clean run test
