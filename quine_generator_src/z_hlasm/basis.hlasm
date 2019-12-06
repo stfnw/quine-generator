@@ -1,0 +1,147 @@
+         TITLE 'QUINE program'
+***********************************************************************
+* This program is a quine.                                            *
+* It writes it's own source code to the SOURCE DD name                *
+***********************************************************************
+QUINE AMODE 24
+QUINE RMODE 24
+QUINE CSECT
+* PROLOG
+         BAKR  14,0           * save callers registers,
+*                               return address on linkage stack
+         LR    12,15          * set up program base register
+         USING QUINE,12
+         STORAGE OBTAIN,LENGTH=72 * get reentrant savearea
+         LR    13,1           * load savearea address in r13
+         MVC   4(4,13),=C'F1SA' * mark the savearea as dummy
+*                                 (indicate that linkage stack is used)
+
+*        INSERT REAL PROGRAM FUNCTIONALITY HERE
+
+* MAIN PROGRAM
+         BAL   14,PRINTSRC    * call the routine to print its own
+*                               source code
+
+* EPILOG
+         LR    1,13           * load savearea address
+         STORAGE RELEASE,ADDR=(1),LENGTH=72 * free savearea
+         XR    15,15          * set return code to 0 (success)
+         PR                   * return to caller
+
+***********************************************************************
+* Subroutine to print the whole source code of the program from its   *
+* hexadecimal encoded form                                            *
+* This is achieved by printing the encoded program form twice,        *
+* in different interpretations: once as code, and once as data.       *
+***********************************************************************
+PRINTSRC BAKR  14,0
+         OPEN  (OUTDCB,(OUTPUT))
+         BAL   14,PRINTDATAASCODE
+         BAL   14,PRINTDATAASDATA
+         CLOSE (OUTDCB)
+         PR
+
+* print the data as code: equivalent to normal print of the hex values
+* interpreted as EBCDIC
+* e.g. memory content of X'C1C2C3' is printed as `ABC`
+PRINTDATAASCODE BAKR  14,0
+         LGFI  7,0            * R7 - byte index/offset in dataenc
+LOOP     PUT   OUTDCB,DATAENC+0(7) * output current record
+         AFI   7,80           * increase index by LRECL, = 80
+         CLFI  7,ENCLEN       * finished processing all input?
+         JL    LOOP           *   no  -> repeat
+         PR                   *   yes -> finished
+
+* print the data as data: equivalent to printing the hex values
+* as hex string
+* e.g. memory content of X'C1C2C3' is printed as `X'C1C2C3'`
+PRINTDATAASDATA BAKR  14,0
+*        print the prefix of the encoded data definition
+         MVC   RECBUF(80),=CL80'DATAENC  DS    0D' * 0D -> no content,
+*                             just an anchor for the symbol
+         PUT   OUTDCB,RECBUF
+
+         BAL   14,DECODE
+
+*        print the suffix of the encoded data definition
+         MVC   RECBUF(80),=CL80'ENCLEN   EQU   *-DATAENC'
+         PUT   OUTDCB,RECBUF
+         MVC   RECBUF(80),=CL80''
+         PUT   OUTDCB,RECBUF
+         MVC   RECBUF(80),=CL80'         END'
+         PUT   OUTDCB,RECBUF
+         PR
+
+* each input nibble is encoded as one output byte (hex digit)
+DECODE   BAKR  14,0
+INBPERREC EQU  25             * 25 input bytes / 50 output bytes
+*                               per record
+
+         LGFI  7,0            * R7 - global byte index/offset (total
+*                                    number of processed input bytes)
+
+*                               decode one record full of output text
+LOOPREC  LGFI  8,0            * R8 - local byte index/offset
+*                                    (number of processed input bytes
+*                                    in the current record)
+         MVC   RECBUF(80),=CL80'         DC    X''' * fill buf prefix
+
+LOOPBYTE ICY   2,DATAENC+0(7)
+         LGR   3,2            * dataenc, split nibbles in separate regs
+         NILF  2,X'F'         * R2 - low nibble
+         SRL   3,4            * R3 - high nibble
+
+*                               convert high nibble from hex to string
+         CLFI  3,9            * check if number (0-9) or alpha (A-F)
+         JH    ALPHH
+NUMH     AHI   3,C'0'         * if number: add as offset to char '0'
+         J     CONTH          * (0-9 are sequential in EBCDIC -> works)
+ALPHH    AHI   3,C'A'-10      * if alpha: subtract 10, offset from 'A'
+*                               (A-F are sequential in EBCDIC -> works)
+CONTH    SLL   8,1            * each byte in yields two byte out, shift
+         STC   3,RECBUF+17(8) * store hex digit in correct buffer pos
+         SRL   8,1            * shift back (restore old index value)
+
+*                               convert low nibble (analogous)
+         CLFI  2,9
+         JH    ALPHL
+NUML     AHI   2,C'0'
+         J     CONTL
+ALPHL    AHI   2,C'A'-10
+CONTL    SLL   8,1
+         STC   2,RECBUF+18(8)
+         SRL   8,1
+
+         AFI   7,1            * increment global and local byte index
+         AFI   8,1
+
+         CLFI  7,ENCLEN       * processed all input bytes?
+         JNL   PRINTBUF       *   -> yes
+*                             *   -> no
+         CLFI  8,INBPERREC    * processed all bytes in current record?
+         JNL   PRINTBUF       *   -> yes
+         J     LOOPBYTE       *   -> no
+
+PRINTBUF LGFI  9,C''''        * R9 - temp register
+         SLL   8,1
+         STC   9,RECBUF+17(8) * add record buffer suffix: close '
+         SRL   8,1
+         PUT   OUTDCB,RECBUF  * output record buffer
+         CLFI  7,ENCLEN       * processed all input bytes?
+         JL    LOOPREC        *   -> no
+*                                 -> yes, finished
+         PR
+
+
+***********************************************************************
+* DATA                                                                *
+***********************************************************************
+         LTORG
+         DS    0D             * force alignment
+OUTDCB   DCB   DDNAME=SOURCE,DSORG=PS,MACRF=(PM),                      X
+               RECFM=FB,LRECL=80,BLKSIZE=320
+         DS    0D             * force alignment
+RECBUF   DS    CL80           * buffer for one record (for PUT)
+
+* hex encoded data of the program source (included with pre-processing)
+         DS    0D             * force alignment
